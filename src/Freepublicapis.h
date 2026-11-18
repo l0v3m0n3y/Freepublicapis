@@ -15,10 +15,10 @@ using namespace web::http::client;
 
 class Freepublicapis {
 private:
-    std::string api_base = "https://www.freepublicapis.com/api";
+    std::string api = "https://www.freepublicapis.com/api";
     http_client_config client_config;
     
-    http_request create_request(const std::string& endpoint, const std::string& method) {
+    http_request createRequest(const std::string& endpoint, const std::string& method) {
         http_request request;
         
         if (method == "GET") {
@@ -41,7 +41,7 @@ private:
         return request;
     }
     
-    std::string build_query_params(const std::map<std::string, std::string>& params) {
+    std::string buildQueryParams(const std::map<std::string, std::string>& params) {
         if (params.empty()) return "";
         
         std::string query = "?";
@@ -56,9 +56,9 @@ private:
         }
         return query;
     }
-    pplx::task<json::value> make_api_call(const std::string& endpoint, const std::string& method) {
-        http_client client(utility::conversions::to_string_t(api_base), client_config);
-        auto request = create_request(endpoint, method);
+    pplx::task<json::value> makeApiCall(const std::string& endpoint, const std::string& method) {
+        http_client client(utility::conversions::to_string_t(api), client_config);
+        auto request = createRequest(endpoint, method);
 
         return client.request(request)
             .then([](http_response response) {
@@ -90,19 +90,26 @@ public:
         client_config.set_validate_certificates(false);
     }
 
-    pplx::task<json::value> random_api() {
-        return make_api_call("/random", "GET");
+    pplx::task<json::value> randomApi() {
+        return makeApiCall("/random", "GET");
     }
 
-    pplx::task<json::value> api_by_id(int api_id) {
-        return make_api_call("/apis/" + std::to_string(api_id), "GET");
+    pplx::task<json::value> apiById(int apiId) {
+        return makeApiCall("/apis/" + std::to_string(apiId), "GET");
     }
 
-    pplx::task<json::value> get_api_list(int limit=0,const std::string& sort="") {
+    pplx::task<json::value> getApiList(int limit=0,const std::string& sort="") {
         std::map<std::string, std::string> params;
         if (!sort.empty()) params["sort"] = utility::conversions::to_utf8string(web::uri::encode_data_string(utility::conversions::to_string_t(sort)));
         if (limit > 0) params["limit"] = std::to_string(limit);
-        return make_api_call("/apis" + build_query_params(params), "GET");
+        return makeApiCall("/apis" + buildQueryParams(params), "GET");
+    }
+
+    pplx::task<json::value> analyzeDocs(const std::string& documentation) {
+        json::value data;
+        data[U("honeypot")] = json::value(utility::conversions::to_string_t(""));
+        data[U("documentation")] = json::value(utility::conversions::to_string_t(documentation));
+        return makeApiCall("/analyze-docs", "POST",data.serialize());
     }
 };
 
