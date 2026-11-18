@@ -7,7 +7,7 @@ api for freepublicapis.com api for getting free api
 
 int main() {
    Freepublicapis api;
-    auto random_api = api.random_api().then([](json::value result) {
+    auto randomApi = api.randomApi().then([](json::value result) {
         std::cout << result<< std::endl;
     });
     random_api.wait();
