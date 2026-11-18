@@ -18,7 +18,7 @@ private:
     std::string api = "https://www.freepublicapis.com/api";
     http_client_config client_config;
     
-    http_request createRequest(const std::string& endpoint, const std::string& method) {
+    http_request createRequest(const std::string& endpoint, const std::string& method, const std::string& data = "") {
         http_request request;
         
         if (method == "GET") {
@@ -33,13 +33,15 @@ private:
         
         request.set_request_uri(utility::conversions::to_string_t(endpoint));
         
-        // Set headers
-        request.headers().add(U("Accept"), U("application/json"));
-        request.headers().add(U("Content-Type"), U("application/json"));
         request.headers().add(U("User-Agent"), U("Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/115.0"));
+        
+        if (!data.empty() && (method == "POST" || method == "PUT")) {
+            request.set_body(data);
+        }
         
         return request;
     }
+    
     
     std::string buildQueryParams(const std::map<std::string, std::string>& params) {
         if (params.empty()) return "";
@@ -56,9 +58,9 @@ private:
         }
         return query;
     }
-    pplx::task<json::value> makeApiCall(const std::string& endpoint, const std::string& method) {
+    pplx::task<json::value> makeApiCall(const std::string& endpoint, const std::string& method, const std::string& data = "") {
         http_client client(utility::conversions::to_string_t(api), client_config);
-        auto request = createRequest(endpoint, method);
+        auto request = createRequest(endpoint, method, data);
 
         return client.request(request)
             .then([](http_response response) {
@@ -111,6 +113,22 @@ public:
         data[U("documentation")] = json::value(utility::conversions::to_string_t(documentation));
         return makeApiCall("/analyze-docs", "POST",data.serialize());
     }
+
+    pplx::task<json::value> analyzeDocsFinal(const std::string& job) {
+        json::value data;
+        data[U("job")] = json::value(utility::conversions::to_string_t(job));
+        data[U("test")] = json::value::boolean(true);
+        return makeApiCall("/analyze-docs/status", "POST",data.serialize());
+    }
+
+    pplx::task<json::value> sendApi(const std::string& token) {
+        json::value data;
+        data[U("token")] = json::value(utility::conversions::to_string_t(token));
+        data[U("honeypot")] = json::value(utility::conversions::to_string_t(""));
+        return makeApiCall("/submit-api", "POST",data.serialize());
+    }
+
+
 };
 
 #endif
